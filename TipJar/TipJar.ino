@@ -17,6 +17,8 @@
 		- Settings page?
 			- Ability to change address?
 			- Ability to change volume?
+		- Publish schematics
+		- Make tutorial
 		
 
 
