@@ -12,17 +12,19 @@ class WebsocketManager{
 
 	public:
 		static WebsocketsClient client;
-
+		static bool connected;
 
 		static void onMessage( WebsocketsMessage message );
 		static void onEvents(WebsocketsEvent event, String data);
 
-		static void setup( void (*coinsReceivedCallback)( uint32_t amount ) );
-		static bool reconnect();
+		static void setup( void (*coinsReceivedCallback)( uint32_t amount ), void (*onDisconnectCallback)() );
+		static bool reconnect( void (*onConnectCallback)());
 		static void loop();
 
 	private:
 		static void (*onCoinsReceived)( uint32_t amount );
+		static void (*onConnect)();
+		static void (*onDisconnect)(); 
 	
 
 };

@@ -3,15 +3,9 @@
 	Don't forget to edit your TFT_eSPI config in libraries
 
 	Todo: 
-		- Automatic reconnect
-			- Wifi
-			- Websocket
-		- Show when you have been disconnected
-		- Error messages
 		- Stats display
 			- Total tips today?
 			- Total tips all time?
-		- Pushing on the display in normal mode takes it back to QR code
 		- Button sounds
 		- Test audio
 		- Settings page?
@@ -41,14 +35,17 @@
 #include "SoundManager.h"
 #include "ConnectionManager.h"
 
+void onWifiCredentials( String ssid, String pass );
 
 
 
 uint32_t last_rec = 0;			// Timestamp when we last received a tip
 uint32_t last_screensav = 0; 	// 
 bool screensav_active = false;
-bool connected = true;
 
+bool connected(){
+	return WebsocketManager::connected && ConnectionManager::connected;
+}
 
 void onTipReceived( uint32_t amount ){
 
@@ -65,27 +62,46 @@ void onTipReceived( uint32_t amount ){
 
 }
 
+void onDisconnect(){
+
+	// Try to reconnect
+	onWifiCredentials("", "");
+
+}
+
+void onWebsocketsSetup(){
+	
+	DisplayManager::setScreenQR();
+
+}
+
+
+void onWebsocketsDisconnect(){
+
+	if( !ConnectionManager::connected )
+		return;
+	DisplayManager::setScreenConnectingWebsocket();
+	WebsocketManager::reconnect( onWebsocketsSetup );
+
+}
+
 
 
 // Attempt a wifi connection
 bool wifiConnect( String ssid = "", String pass = "" ){
-
-	connected = false;
 
 	DisplayManager::setScreenConnecting();
 	if( !ConnectionManager::autoConnect(ssid, pass, DisplayManager::setScreenConnectingTicks) ){
 
 		DisplayManager::setScreenConnectionFailed();
 		delay(3000);
-		Serial.println("Todo: re-scan networks"); 
-		//scanNetworks();
 		return false;
 
 	}
 
-	WebsocketManager::reconnect();
-	connected = true;
-
+	onWebsocketsDisconnect();	// reconnects to websockets
+	
+	
 	return true;
 
 }
@@ -94,10 +110,20 @@ bool wifiConnect( String ssid = "", String pass = "" ){
 void onWifiCredentials( String ssid = "", String pass = "" ){
 
 	// All connected, business as usual
-	if( wifiConnect(ssid, pass) )
-		DisplayManager::setScreenQR();
-	else
+	if( !wifiConnect(ssid, pass) )
 		DisplayManager::setScreenNetworkScan( onWifiCredentials );	// Recurse until you fix it >:[
+	
+
+}
+
+void onTouch( uint16_t x, uint16_t y ){
+
+	Serial.printf("onTouch %i, %i, %i\n", DisplayManager::MENU, x, y);
+	// Retry connection, because it's more likely that we just lost the usual wifi
+	if( DisplayManager::MENU == DisplayManager::MENU_RESCAN )
+		onWifiCredentials();
+	else if( DisplayManager::MENU == DisplayManager::MENU_DEFAULT )
+		last_screensav = 0;
 	
 
 }
@@ -110,8 +136,10 @@ void setup(){
 	Serial.println("IT BEGINS");
 
 	Serial.println("Setup display");
-	DisplayManager::setup();
+	DisplayManager::setup( onTouch );
 	SoundManager::setup();
+
+	ConnectionManager::setup(onDisconnect);
 
 	// Setup SPIFFS
 	if( !SPIFFS.begin() ){
@@ -121,7 +149,7 @@ void setup(){
 	Serial.println("\r\nSPIFFS available!");
 
 	// Setup callbacks and such
-	WebsocketManager::setup( onTipReceived );
+	WebsocketManager::setup( onTipReceived, onWebsocketsDisconnect );
 	
 	onWifiCredentials();
 
@@ -130,6 +158,7 @@ void setup(){
 
 void loop(){
 
+	ConnectionManager::loop();
 	WebsocketManager::loop();
 	DisplayManager::loop();
 
@@ -144,7 +173,7 @@ void loop(){
 
 	}
 	
-	if( !connected )
+	if( !connected() )
 		return;
 
 	// Handle tip display

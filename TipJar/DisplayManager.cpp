@@ -9,12 +9,14 @@ uint16_t DisplayManager::wifi_buttons[5] = {0};
 String DisplayManager::cache_SSID;				// Stores SSID when configuring
 String DisplayManager::cache_passwd;			// Stores password when configuring
 void (*DisplayManager::cache_wifiCallback)(String ssid, String passwd);
+void (*DisplayManager::onTouch)(uint16_t x, uint16_t y);
 uint16_t DisplayManager::keypad_btns[KEYBOARD_LENGTH*2] = {0};	// X/Y 
 bool DisplayManager::keyboardUpperCase = false;
 
 
-void DisplayManager::setup(){
+void DisplayManager::setup( void(*onTouchHandler)(uint16_t x, uint16_t y) ){
 
+	onTouch = onTouchHandler;
 	// TFT loading
 	tft.init();
 	tft.setRotation(1);
@@ -141,6 +143,7 @@ void DisplayManager::loop(){
 
 		}
 
+		onTouch(t_x, t_y);
 
 	}
 	else if( ms-lastTouch > 100 )
@@ -160,7 +163,7 @@ void DisplayManager::setScreenConnecting(){
 	tft.setTextColor(TFT_YELLOW);
 	tft.setTextSize(2);
 	tft.fillScreen(TFT_BLACK);
-	tft.drawString("Connecting", CENTER, 20);
+	tft.drawString("WiFi Connecting", CENTER, 20);
 
 }
 void DisplayManager::setScreenConnectingTicks( uint8_t ticks ){
@@ -174,7 +177,17 @@ void DisplayManager::setScreenConnectingTicks( uint8_t ticks ){
 	}
 
 }
-	
+
+void DisplayManager::setScreenConnectingWebsocket(){
+	MENU = MENU_NONE;
+
+	tft.setTextColor(TFT_YELLOW);
+	tft.setTextSize(2);
+	tft.fillScreen(TFT_BLACK);
+	tft.drawString("Connecting to dogechain", CENTER, 20);
+
+}
+
 void DisplayManager::setScreenConnectionFailed(){
 	MENU = MENU_NONE;
 	tft.fillScreen(TFT_BLACK);
@@ -225,15 +238,18 @@ void DisplayManager::setScreenNetworkScan( void(*wifiCallback)(String ssid, Stri
 	tft.setTextSize(2);
 	tft.drawString("Scanning", x, 20);
 
-	uint8_t n = WiFi.scanNetworks();
+	int8_t n = WiFi.scanNetworks();
 	tft.fillScreen(TFT_BLACK);
 
-	if( !n ){
+	if( n < 1 ){
+		MENU = MENU_RESCAN;
 		tft.drawString("No networks found", x, 100);
-		tft.drawString("Try restarting", x, 150);
+		tft.setTextSize(2);
+		tft.drawString("Tap to retry", x, 150);
 		return;
 	}
 	
+	Serial.printf("Found %i networks\n", n);
 
 	tft.drawString("Pick a network", x, 20);
 

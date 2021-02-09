@@ -1,10 +1,37 @@
 #include "ConnectionManager.h"
 
+void (*ConnectionManager::onDisconnect)();
+bool ConnectionManager::connected = false;
 
-void ConnectionManager::setup(){
+//uint32_t tick = 0;
+
+void ConnectionManager::setup( void(*onDisconnectCallback)() ){
 	
+	onDisconnect = onDisconnectCallback;
+
 }
 
+void ConnectionManager::loop(){
+
+	if( !connected )
+		return;
+
+	/*
+	if( millis()-tick > 1000 ){
+
+		Serial.printf("Status %i\n", WiFi.status() == WL_CONNECTED);
+		tick = millis();
+	}
+	*/
+
+	if( WiFi.status() != WL_CONNECTED ){
+
+		connected = false;
+		onDisconnect();
+
+	}
+
+}
 
 // Returns true/false
 bool ConnectionManager::autoConnect( String ssid, String password, void(*connectionTick)(uint8_t tick) ){
@@ -36,6 +63,7 @@ bool ConnectionManager::autoConnect( String ssid, String password, void(*connect
 	if( WiFi.status() != WL_CONNECTED )
 		return false;
 
+	connected = true;
 	Serial.println("Connected to the WiFi network");
 	Serial.println(WiFi.localIP());
 	return true;

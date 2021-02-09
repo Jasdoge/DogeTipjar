@@ -16,6 +16,7 @@ class DisplayManager{
 		static const uint8_t MENU_SSID = 1;	// Pick a network
 		static const uint8_t MENU_PASSWD = 2;	// Pick a password
 		static const uint8_t MENU_DEFAULT = 3;	// Running as normal
+		static const uint8_t MENU_RESCAN = 4;	// Tap to re-scan network
 		static uint8_t MENU;
 
 		// Library classes
@@ -38,6 +39,7 @@ class DisplayManager{
 
 		static void setScreenNetworkScan( void(*wifiCallback)(String ssid, String passwd) );
 		static void setScreenNetworkPassword();
+		static void setScreenConnectingWebsocket();
 			
 		static void setScreenStats();
 		
@@ -46,13 +48,14 @@ class DisplayManager{
 
 
 
-		static void setup();
+		static void setup( void(*onTouchHandler)(uint16_t x, uint16_t y) );
 		static void loop();
 
 	private:
 		static String cache_SSID;				// Stores SSID when configuring
 		static String cache_passwd;			// Stores password when configuring
 		static void(*cache_wifiCallback)(String ssid, String passwd);
+		static void(*onTouch)(uint16_t x, uint16_t y);
 
 
 		static uint32_t lastTouch;

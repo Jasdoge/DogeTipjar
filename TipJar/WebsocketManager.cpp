@@ -2,10 +2,14 @@
 
 WebsocketsClient WebsocketManager::client = WebsocketsClient();
 void (*WebsocketManager::onCoinsReceived)( uint32_t amount );
+void (*WebsocketManager::onConnect)();
+bool WebsocketManager::connected = false;
+void (*WebsocketManager::onDisconnect)(); 
 
-void WebsocketManager::setup( void (*coinsReceivedCallback)( uint32_t amount ) ){
+void WebsocketManager::setup( void (*coinsReceivedCallback)( uint32_t amount ), void (*onDisconnectCallback)() ){
 
 	onCoinsReceived = coinsReceivedCallback;
+	onDisconnect = onDisconnectCallback;
 
 	client.onMessage(onMessage);
 	client.onEvent(onEvents);
@@ -13,9 +17,14 @@ void WebsocketManager::setup( void (*coinsReceivedCallback)( uint32_t amount ) )
 
 }
 
-bool WebsocketManager::reconnect(){
+bool WebsocketManager::reconnect( void (*onConnectCallback)() ){
 
+	connected = false;
+	onConnect = onConnectCallback;
+
+	Serial.println("Connection to dogechain");
 	bool connected = client.connect("wss://ws.dogechain.info/inv");
+	Serial.printf("Connection status %i\n", connected);
 	if( !connected ){
 		Serial.println("Failed to connect");
 		return false;
@@ -40,7 +49,16 @@ void WebsocketManager::onMessage( WebsocketsMessage message ){
 	Serial.print("Got message: ");
 	Serial.println(message.data());
 
-	if( !data["op"].isNull() && !data["x"].isNull() && data["op"] == "utx" && !data["x"]["outputs"].isNull() ){
+	if( data["op"].isNull() )
+		return;
+
+	if( !data["msg"].isNull() && data["msg"] == "subscribed" ){
+		connected = true;
+		onConnect();
+		return;
+	}
+
+	if( !data["x"].isNull() && data["op"] == "utx" && !data["x"]["outputs"].isNull() ){
 
 		const JsonObject x = data["x"];
 		const String txid = x["hash"];
@@ -73,11 +91,16 @@ void WebsocketManager::onEvents(WebsocketsEvent event, String data) {
 
 	if(event == WebsocketsEvent::ConnectionOpened) {
 		Serial.println("Connnection Opened");
-	} else if(event == WebsocketsEvent::ConnectionClosed) {
+	}
+	else if(event == WebsocketsEvent::ConnectionClosed) {
 		Serial.println("Connnection Closed");
-	} else if(event == WebsocketsEvent::GotPing) {
+		connected = false;
+		onDisconnect();
+	}
+	else if(event == WebsocketsEvent::GotPing) {
 		Serial.println("Got a Ping!");
-	} else if(event == WebsocketsEvent::GotPong) {
+	}
+	else if(event == WebsocketsEvent::GotPong) {
 		Serial.println("Got a Pong!");
 	}
 

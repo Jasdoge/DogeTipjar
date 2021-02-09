@@ -6,8 +6,15 @@
 class ConnectionManager{
 
 	public:
-		static void setup();
+		static bool connected;
+
+		static void setup( void(*onDisconnectCallback)() );
+		static void loop();
+
 		static bool autoConnect( String ssid, String password, void(*connectionTick)(uint8_t tick) );
+		
+	private:
+		static void (*onDisconnect)();
 
 };
 
