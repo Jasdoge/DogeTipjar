@@ -4,13 +4,15 @@
 
 	Todo: 
 		- Stats display
-			- Total tips today?
-			- Total tips all time?
+			- Total tips all time
+			- Last tip received
 		- Button sounds
 		- Test audio
-		- Settings page?
-			- Ability to change address?
-			- Ability to change volume?
+		- Settings page on boot
+			- Ability to change address
+			- Show when address was last changed
+			- Show current address and last change on boot
+			- Ability to change volume
 		- Publish schematics
 		- Make tutorial
 		
@@ -34,6 +36,7 @@
 #include "WebsocketManager.h"
 #include "SoundManager.h"
 #include "ConnectionManager.h"
+#include "LogManager.h"
 
 void onWifiCredentials( String ssid, String pass );
 
@@ -59,6 +62,8 @@ void onTipReceived( uint32_t amount ){
 	
 	SoundManager::play(sound);
 	DisplayManager::setScreenDogeReceived(amount);
+
+	LogManager::addPaymentLog(amount);
 
 }
 
@@ -147,6 +152,8 @@ void setup(){
 		while (1) yield(); // Stay here twiddling thumbs waiting
 	}
 	Serial.println("\r\nSPIFFS available!");
+
+	LogManager::setup();
 
 	// Setup callbacks and such
 	WebsocketManager::setup( onTipReceived, onWebsocketsDisconnect );

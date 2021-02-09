@@ -1,9 +1,9 @@
 #include "ConnectionManager.h"
 
+tm ConnectionManager::timeinfo;
+
 void (*ConnectionManager::onDisconnect)();
 bool ConnectionManager::connected = false;
-
-//uint32_t tick = 0;
 
 void ConnectionManager::setup( void(*onDisconnectCallback)() ){
 	
@@ -15,14 +15,6 @@ void ConnectionManager::loop(){
 
 	if( !connected )
 		return;
-
-	/*
-	if( millis()-tick > 1000 ){
-
-		Serial.printf("Status %i\n", WiFi.status() == WL_CONNECTED);
-		tick = millis();
-	}
-	*/
 
 	if( WiFi.status() != WL_CONNECTED ){
 
@@ -63,10 +55,25 @@ bool ConnectionManager::autoConnect( String ssid, String password, void(*connect
 	if( WiFi.status() != WL_CONNECTED )
 		return false;
 
+	
+	configTime(0, 0, "pool.ntp.org");
+	if( !getLocalTime(&timeinfo) ){
+		Serial.println("NTP not available");
+		return false;
+	}
+
 	connected = true;
 	Serial.println("Connected to the WiFi network");
 	Serial.println(WiFi.localIP());
 	return true;
+
+}
+
+time_t ConnectionManager::getTime(){
+
+	time_t now;
+	time(&now);
+	return now;
 
 }
 
