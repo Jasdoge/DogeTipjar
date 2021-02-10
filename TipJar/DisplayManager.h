@@ -26,6 +26,8 @@ class DisplayManager{
 		static const uint8_t EVT_TOUCH = 0;		// i = x/y coords, x being the leftmost 16 bits
 		static const uint8_t EVT_ADDR = 1;		// s = address. Raised when address changes.
 		static const uint8_t EVT_CONTINUE = 2;	// raised on boot screen, skips the wait time
+		static const uint8_t EVT_VOLUME = 3;	// i = 1 for up, 0 for down
+		static const uint8_t EVT_BUTTON_CLICK = 4;	// Raised whenever a button is clicked
 
 		// Library classes
 		static TFT_eSPI tft;
@@ -51,9 +53,11 @@ class DisplayManager{
 		static void setScreenSaver();
 
 		static bool settingsContinueButtonEnabled;
-		static void setScreenSettingsTicks( int8_t ticks );
+
 		static void setScreenSettings( uint64_t total_tips, String address, uint64_t address_last_changed );
+		static void setScreenSettingsTicks( int8_t ticks );
 		static void setScreenSettingsEnableContinue();	// Enables the "Continue" button
+		static void setScreenSettingsVolume( uint8_t volume );
 
 		static void setScreenAddress();
 
@@ -97,6 +101,16 @@ class DisplayManager{
 		static const uint16_t KEYBOARD_DONE_BTN_WIDTH = 60;
 		static const uint16_t KEYBOARD_DONE_BTN_HEIGHT = WIFI_BUTTON_HEIGHT;
 
+		static const uint16_t SETTING_LINES_START_X = 10;
+		static const uint16_t SETTING_LINES_START_Y = 50;
+		static const uint16_t SETTING_LINES_HEIGHT = 20;
+
+		static const uint16_t VOLUME_BUTTON_X = 110;
+		static const uint16_t VOLUME_BUTTON_Y = SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*3;
+		static const uint16_t VOLUME_BUTTON_WIDTH = 18;
+
+		
+
 		static uint16_t keypad_btns[KEYBOARD_LENGTH*2];	// X/Y 
 		static bool keyboardUpperCase;
 
@@ -111,6 +125,7 @@ class DisplayManager{
 		static void drawTextEditor( bool stars = false );
 		static void drawKeyboard();
 		
+		static bool checkClick( uint16_t x, uint16_t y, uint16_t xMin, uint16_t xMax, uint16_t yMin, uint16_t yMax );
 
 };
 

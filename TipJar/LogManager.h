@@ -11,6 +11,7 @@ class LogManager{
 		static uint8_t volume;
 		static String RECEIVING_ADDRESS;
 		static uint64_t address_changed;
+		
 
 		static void setup();
 		static void addPaymentLog( uint32_t amount );

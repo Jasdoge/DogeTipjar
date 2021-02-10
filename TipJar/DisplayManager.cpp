@@ -52,7 +52,7 @@ void DisplayManager::loop(){
 		t_y = 240-t_y;	// May need to comment this out
 
 		onEvent(EVT_TOUCH, (t_x<<16)|t_y, "");
-		
+
 		Serial.printf("%ix, %iy\n", t_x, t_y);
 
 		// WiFi SSID Listing
@@ -64,15 +64,16 @@ void DisplayManager::loop(){
 				uint16_t y = wifi_buttons[i];
 				if( !y )
 					break;
-				if( 
-					t_x > WIFI_BUTTON_LEFT && t_x < WIFI_BUTTON_WIDTH+WIFI_BUTTON_LEFT &&
-					t_y > y && t_y < y+WIFI_BUTTON_HEIGHT-WIFI_BUTTON_PADDING_BOTTOM
-				){
+
+				if(checkClick(
+					t_x, t_y,
+					WIFI_BUTTON_LEFT,
+					WIFI_BUTTON_WIDTH+WIFI_BUTTON_LEFT,
+					y, 
+					y+WIFI_BUTTON_HEIGHT-WIFI_BUTTON_PADDING_BOTTOM
+				)){
 
 					cache_SSID = WiFi.SSID(i);
-					Serial.printf("CLICKED BUTTON: %i\n", i);
-					Serial.println(cache_SSID);
-
 					if( WiFi.encryptionType(i) == WIFI_AUTH_OPEN ){
 						cache_wifiCallback(cache_SSID, "");
 					}
@@ -91,13 +92,13 @@ void DisplayManager::loop(){
 		// Password keypad scanning
 		else if( MENU == MENU_PASSWD || MENU == MENU_ADDRESS ){
 
-			if( 
-				t_x > KEYBOARD_DONE_BTN_POS_X && t_x < KEYBOARD_DONE_BTN_POS_X+KEYBOARD_DONE_BTN_WIDTH &&
-				t_y > KEYBOARD_DONE_BTN_POS_Y && t_y < KEYBOARD_DONE_BTN_POS_Y+KEYBOARD_DONE_BTN_HEIGHT
-			){
-				
-				tft.fillRect(KEYBOARD_DONE_BTN_POS_X, KEYBOARD_DONE_BTN_POS_Y, KEYBOARD_DONE_BTN_WIDTH, KEYBOARD_DONE_BTN_HEIGHT, 0xFFFF);
-				delay(50);
+			if(checkClick(
+				t_x, t_y,
+				KEYBOARD_DONE_BTN_POS_X,
+				KEYBOARD_DONE_BTN_POS_X+KEYBOARD_DONE_BTN_WIDTH,
+				KEYBOARD_DONE_BTN_POS_Y,
+				KEYBOARD_DONE_BTN_POS_Y+KEYBOARD_DONE_BTN_HEIGHT
+			)){
 
 				if( MENU == MENU_PASSWD ){
 					cache_wifiCallback(cache_SSID, cache_text);
@@ -116,13 +117,11 @@ void DisplayManager::loop(){
 				const uint16_t x = keypad_btns[i*2];
 				const uint16_t y = keypad_btns[i*2+1];
 
-				if( 
-					t_x > x && t_x < x+KEYBOARD_BTN_WIDTH &&
-					t_y > y && t_y < y+KEYBOARD_BTN_HEIGHT
-				){
-
-					tft.fillRect(x, y, KEYBOARD_BTN_WIDTH, KEYBOARD_BTN_HEIGHT, 0xFFFF);
-					delay(50);
+				if(checkClick(
+					t_x, t_y,
+					x, x+KEYBOARD_BTN_WIDTH,
+					y, y+KEYBOARD_BTN_HEIGHT
+				)){
 
 					const char *keymap = keyboardUpperCase ? KEYBOARD_MAP_UPPERCASE : KEYBOARD_MAP_LOWERCASE;
 					char pushed = keymap[i];
@@ -152,22 +151,52 @@ void DisplayManager::loop(){
 
 		else if( MENU == MENU_SETTINGS ){
 
-			if(
-				t_x > CENTER-60 && t_x < CENTER+60 &&
-				t_y > 120 && t_y < 120+WIFI_BUTTON_HEIGHT
-			){
-
+			// Address button clicked
+			if(checkClick(
+				t_x, t_y,
+				CENTER-60,
+				CENTER+60,
+				SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5,
+				SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5+WIFI_BUTTON_HEIGHT
+			)){
 				setScreenAddress();
-
 			}
 
+			// Continue button
 			if(
 				settingsContinueButtonEnabled &&
-				t_x > CENTER-60 && t_x < CENTER+60 &&
-				t_y > 120+WIFI_BUTTON_HEIGHT+5 && t_y < 120+WIFI_BUTTON_HEIGHT+5+WIFI_BUTTON_HEIGHT
-			)onEvent(EVT_CONTINUE, 0, "");
+				checkClick(
+					t_x, t_y,
+					CENTER-60,
+					CENTER+60,
+					SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5+WIFI_BUTTON_HEIGHT+5,
+					SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5+WIFI_BUTTON_HEIGHT+5+WIFI_BUTTON_HEIGHT
+				)
+			){
+				onEvent(EVT_CONTINUE, 0, "");
+			}
 
+			// Volume minus button
+			if(checkClick(
+				t_x, t_y,
+				VOLUME_BUTTON_X,
+				VOLUME_BUTTON_X+VOLUME_BUTTON_WIDTH,
+				VOLUME_BUTTON_Y-8,
+				VOLUME_BUTTON_Y-8+VOLUME_BUTTON_WIDTH
+			)){
+				onEvent(EVT_VOLUME, 0, "");
+			}
 
+			// Volume plus button
+			if(checkClick(
+				t_x, t_y,
+				VOLUME_BUTTON_X+VOLUME_BUTTON_WIDTH+2,
+				VOLUME_BUTTON_X+VOLUME_BUTTON_WIDTH+2+VOLUME_BUTTON_WIDTH,
+				VOLUME_BUTTON_Y-8,
+				VOLUME_BUTTON_Y-8+VOLUME_BUTTON_WIDTH
+			)){
+				onEvent(EVT_VOLUME, 1, "");
+			}
 
 		}
 
@@ -179,6 +208,23 @@ void DisplayManager::loop(){
 
 
 }
+
+
+// Check if a click is within boundsand draws a rect and raises an event in that case
+bool DisplayManager::checkClick( uint16_t x, uint16_t y, uint16_t xMin, uint16_t xMax, uint16_t yMin, uint16_t yMax ){
+
+	if( x >= xMin && x <= xMax && y >= yMin && y <= yMax ){
+
+		onEvent(EVT_BUTTON_CLICK, 0, "");
+		tft.fillRect(xMin, yMin, xMax-xMin, yMax-yMin, 0xFFFF);
+		delay(50);
+		return true;
+
+	}
+	return false;
+
+}
+
 
 
 
@@ -345,12 +391,14 @@ void DisplayManager::setScreenSettings( uint64_t total_tips, String address, uin
 	tft.setTextDatum(ML_DATUM);
 	String out;
 
+
 	out = "Addr: "+address;
-	tft.drawString(out.c_str(), 10, 50);
+	tft.drawString(out.c_str(), SETTING_LINES_START_X, SETTING_LINES_START_Y);
 
 	out = "Last change: ";
 	time_t now;
 	time(&now);
+
 	uint32_t delta = now-address_last_changed;
 	if( delta < 3600 )
 		out += String(delta/60)+" minutes ago";
@@ -359,26 +407,61 @@ void DisplayManager::setScreenSettings( uint64_t total_tips, String address, uin
 	else
 		out += String(delta/(3600*24))+" days ago";
 
-	tft.drawString(out.c_str(), 10, 65);
+	if( delta < 3600*24 )
+		tft.setTextColor(TFT_RED);
+	tft.drawString(out.c_str(), SETTING_LINES_START_X, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT);
+	tft.setTextColor(TFT_YELLOW);
 
-	out = "All time tips: "+String(LogManager::uint64_to_string(total_tips));
-	tft.drawString(out.c_str(), 10, 80);
-
-	tft.setTextDatum(MC_DATUM);
+	out = "All time tips: "+String(LogManager::uint64_to_string(total_tips))+" DOGE";
+	tft.drawString(out.c_str(), SETTING_LINES_START_X, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*2);
 
 	out = "";
+	tft.setTextDatum(MC_DATUM);
 
 	// Buttons
-	tft.fillRect(CENTER-60, 120, 120, WIFI_BUTTON_HEIGHT, BUTTON_COLOR);
-	tft.drawString("Change Address", CENTER, 120+20);
+	tft.fillRect(CENTER-60, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5, 120, WIFI_BUTTON_HEIGHT, BUTTON_COLOR);
+	tft.drawString("Change Address", CENTER, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5+20);
+
+}
+void DisplayManager::setScreenSettingsVolume( uint8_t volume ){
+
+	tft.setTextSize(1);
+	tft.setTextDatum(ML_DATUM);
+
+	tft.fillRect(0, VOLUME_BUTTON_Y-6, VOLUME_BUTTON_X, VOLUME_BUTTON_WIDTH, 0);
+
+	String out = "Volume: "+String(volume)+"/30";
+	tft.drawString(out.c_str(), SETTING_LINES_START_X, VOLUME_BUTTON_Y);
+	tft.setTextDatum(MC_DATUM);
+
+
+	tft.fillRect(
+		VOLUME_BUTTON_X, 
+		VOLUME_BUTTON_Y-8, 
+		VOLUME_BUTTON_WIDTH, 
+		VOLUME_BUTTON_WIDTH, 
+		BUTTON_COLOR
+	);
+	tft.drawString("-", VOLUME_BUTTON_X+VOLUME_BUTTON_WIDTH/2, VOLUME_BUTTON_Y-VOLUME_BUTTON_WIDTH/2+8);
+
+	tft.fillRect(
+		VOLUME_BUTTON_X+VOLUME_BUTTON_WIDTH+2, 
+		VOLUME_BUTTON_Y-8, 
+		VOLUME_BUTTON_WIDTH, 
+		VOLUME_BUTTON_WIDTH, 
+		BUTTON_COLOR
+	);
+	tft.drawString("+", VOLUME_BUTTON_X+VOLUME_BUTTON_WIDTH/2+VOLUME_BUTTON_WIDTH+2, VOLUME_BUTTON_Y-VOLUME_BUTTON_WIDTH/2+8);
+
+
 
 }
 void DisplayManager::setScreenSettingsEnableContinue(){
 
 	settingsContinueButtonEnabled = true;
 	tft.setTextSize(1);
-	tft.fillRect(CENTER-60, 120+WIFI_BUTTON_HEIGHT+5, 120, WIFI_BUTTON_HEIGHT, BUTTON_COLOR);
-	tft.drawString("Continue", CENTER, 120+20+WIFI_BUTTON_HEIGHT+5);
+	tft.fillRect(CENTER-60, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5+WIFI_BUTTON_HEIGHT+5, 120, WIFI_BUTTON_HEIGHT, BUTTON_COLOR);
+	tft.drawString("Continue", CENTER, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5+20+WIFI_BUTTON_HEIGHT+5);
 
 }
 

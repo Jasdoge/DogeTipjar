@@ -6,10 +6,6 @@
 		- Button sounds
 		- Test audio
 		- Settings page on boot
-			- Total tips all time
-			- Ability to change address
-			- Show current address
-			- Show when address was last changed
 			- Ability to change volume
 		- Publish schematics
 		- Make tutorial
@@ -109,6 +105,7 @@ void drawBootScreen( bool force = false ){
 		DisplayManager::setScreenSettingsTicks(boot_ticks);
 		if( boot_ticks > -1 )
 			DisplayManager::setScreenSettingsEnableContinue();
+		DisplayManager::setScreenSettingsVolume(LogManager::volume);
 
 	}else{
 		onWebsocketsDisconnect();	// reconnects to websockets
@@ -176,6 +173,21 @@ void onDisplayEvent( uint8_t evt, uint32_t i = 0, String s = "" ){
 	}
 	else if( evt == DisplayManager::EVT_CONTINUE )
 		drawBootScreen();
+
+	else if( evt == DisplayManager::EVT_VOLUME ){
+		
+		uint8_t vol = LogManager::volume;
+		if( i )
+			++vol;
+		else if( vol )
+			--vol;
+
+		LogManager::setVolume(vol);
+		SoundManager::setVolume(LogManager::volume);	// Doing it this way lets logmanager set limits
+		DisplayManager::setScreenSettingsVolume(LogManager::volume);
+
+	}
+		
 
 }
 

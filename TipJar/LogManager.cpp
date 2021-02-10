@@ -63,11 +63,12 @@ void LogManager::setup(){
 };
 
 
-void LogManager::setVolume( uint8_t volume ){
+void LogManager::setVolume( uint8_t vol ){
 
-	if( volume > 30 )
-		volume = 30;
+	if( vol > 30 )
+		vol = 30;
 
+	volume = vol;
 	File f = SPIFFS.open("/volume.txt", FILE_WRITE);
 	f.print(String(volume).c_str());
 	f.close();
