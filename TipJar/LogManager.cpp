@@ -2,8 +2,9 @@
 
 uint64_t LogManager::total_tips = 0;
 uint64_t LogManager::last_tip = 0;
-
-
+uint8_t LogManager::volume = 20;
+uint64_t LogManager::address_changed = 0;
+String LogManager::RECEIVING_ADDRESS = "";
 
 void LogManager::setup(){
 
@@ -28,9 +29,51 @@ void LogManager::setup(){
 
 	}
 
+	total = SPIFFS.open("/volume.txt");
+	if( total ){
+		
+		String content = total.readString();
+		volume = content.toInt();
+		Serial.printf("Volume: %i\n", volume);
+		total.close();
+
+	}
+
+	total = SPIFFS.open("/address.txt");
+	if( total ){
+		
+		RECEIVING_ADDRESS = total.readString();
+		Serial.printf("Address: %s\n", RECEIVING_ADDRESS.c_str());
+		total.close();
+
+	}
+
+	total = SPIFFS.open("/address_changed.txt");
+	if( total ){
+		
+		String content = total.readString();
+		address_changed = atoll(content.c_str());
+		Serial.printf("Addr changed: %s\n", uint64_to_string(last_tip));
+		total.close();
+
+	}
+
 	
 
 };
+
+
+void LogManager::setVolume( uint8_t volume ){
+
+	if( volume > 30 )
+		volume = 30;
+
+	File f = SPIFFS.open("/volume.txt", FILE_WRITE);
+	f.print(String(volume).c_str());
+	f.close();
+	Serial.printf("Saving volume %s\n", String(volume).c_str());
+
+}
 
 void LogManager::addPaymentLog( uint32_t amount ){
 
@@ -53,6 +96,23 @@ void LogManager::addPaymentLog( uint32_t amount ){
 
 
 };
+
+void LogManager::setAddress( String address, uint64_t time ){
+
+	RECEIVING_ADDRESS = address;
+	File f = SPIFFS.open("/address.txt", FILE_WRITE);
+	f.print(address.c_str());
+	f.close();
+	Serial.println("Saved address");
+
+	address_changed = time;
+	char *text2 = uint64_to_string(time);
+	f = SPIFFS.open("/address_changed.txt", FILE_WRITE);
+	f.print(text2);
+	f.close();
+	Serial.printf("Last change %s\n", text2);
+
+}
 
 
 

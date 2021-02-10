@@ -7,16 +7,16 @@ TFT_eSPI DisplayManager::tft = TFT_eSPI();
 uint32_t DisplayManager::lastTouch = 0;
 uint16_t DisplayManager::wifi_buttons[5] = {0};
 String DisplayManager::cache_SSID;				// Stores SSID when configuring
-String DisplayManager::cache_passwd;			// Stores password when configuring
+String DisplayManager::cache_text;			// Stores password when configuring
 void (*DisplayManager::cache_wifiCallback)(String ssid, String passwd);
-void (*DisplayManager::onTouch)(uint16_t x, uint16_t y);
+void (*DisplayManager::onEvent)(uint8_t event, uint32_t i, String t);
 uint16_t DisplayManager::keypad_btns[KEYBOARD_LENGTH*2] = {0};	// X/Y 
 bool DisplayManager::keyboardUpperCase = false;
+bool DisplayManager::settingsContinueButtonEnabled = false;
 
+void DisplayManager::setup( void(*onEventHandler)(uint8_t event, uint32_t i, String t) ){
 
-void DisplayManager::setup( void(*onTouchHandler)(uint16_t x, uint16_t y) ){
-
-	onTouch = onTouchHandler;
+	onEvent = onEventHandler;
 	// TFT loading
 	tft.init();
 	tft.setRotation(1);
@@ -26,10 +26,6 @@ void DisplayManager::setup( void(*onTouchHandler)(uint16_t x, uint16_t y) ){
 	tft.fillScreen(0);
 	tft.drawString("Loading", 160, 130);
 
-	/*
-	Serial.println("Drawing QR");
-	drawQrCode();
-	*/
 
 }
 
@@ -55,6 +51,8 @@ void DisplayManager::loop(){
 
 		t_y = 240-t_y;	// May need to comment this out
 
+		onEvent(EVT_TOUCH, (t_x<<16)|t_y, "");
+		
 		Serial.printf("%ix, %iy\n", t_x, t_y);
 
 		// WiFi SSID Listing
@@ -91,7 +89,7 @@ void DisplayManager::loop(){
 		}
 
 		// Password keypad scanning
-		else if( MENU == MENU_PASSWD ){
+		else if( MENU == MENU_PASSWD || MENU == MENU_ADDRESS ){
 
 			if( 
 				t_x > KEYBOARD_DONE_BTN_POS_X && t_x < KEYBOARD_DONE_BTN_POS_X+KEYBOARD_DONE_BTN_WIDTH &&
@@ -100,8 +98,15 @@ void DisplayManager::loop(){
 				
 				tft.fillRect(KEYBOARD_DONE_BTN_POS_X, KEYBOARD_DONE_BTN_POS_Y, KEYBOARD_DONE_BTN_WIDTH, KEYBOARD_DONE_BTN_HEIGHT, 0xFFFF);
 				delay(50);
-				cache_wifiCallback(cache_SSID, cache_passwd);
-				cache_SSID = cache_passwd = "";
+
+				if( MENU == MENU_PASSWD ){
+					cache_wifiCallback(cache_SSID, cache_text);
+					
+				}
+				else{
+					onEvent(EVT_ADDR, 0, cache_text);
+				}
+				cache_SSID = cache_text = "";
 
 				return;
 			}
@@ -124,13 +129,15 @@ void DisplayManager::loop(){
 					if( pushed == '^' ){
 						keyboardUpperCase = !keyboardUpperCase;
 					}
-					else if( pushed == '<' && cache_passwd.length() ){
-						cache_passwd = cache_passwd.substring(0, cache_passwd.length()-1);
-						drawPasswordStars();
+					else if( pushed == '<' && cache_text.length() ){
+						cache_text = cache_text.substring(0, cache_text.length()-1);
+						drawTextEditor( MENU == MENU_PASSWD );
 					}
-					else{
-						cache_passwd += String(pushed);
-						drawPasswordStars();
+					else if( MENU != MENU_ADDRESS || cache_text.length() < 34 ){
+
+						cache_text += String(pushed);
+						drawTextEditor( MENU == MENU_PASSWD );
+
 					}
 					drawKeyboard();
 
@@ -143,7 +150,28 @@ void DisplayManager::loop(){
 
 		}
 
-		onTouch(t_x, t_y);
+		else if( MENU == MENU_SETTINGS ){
+
+			if(
+				t_x > CENTER-60 && t_x < CENTER+60 &&
+				t_y > 120 && t_y < 120+WIFI_BUTTON_HEIGHT
+			){
+
+				setScreenAddress();
+
+			}
+
+			if(
+				settingsContinueButtonEnabled &&
+				t_x > CENTER-60 && t_x < CENTER+60 &&
+				t_y > 120+WIFI_BUTTON_HEIGHT+5 && t_y < 120+WIFI_BUTTON_HEIGHT+5+WIFI_BUTTON_HEIGHT
+			)onEvent(EVT_CONTINUE, 0, "");
+
+
+
+		}
+
+		
 
 	}
 	else if( ms-lastTouch > 100 )
@@ -211,16 +239,16 @@ void DisplayManager::setScreenDogeReceived( uint32_t amount ){
 
 }
 
-void DisplayManager::setScreenStats(){
+void DisplayManager::setScreenSaver(){
 	MENU = MENU_DEFAULT;
 	drawBmp("/wallpaper.bmp");
 
 }
 
-void DisplayManager::setScreenQR(){
+void DisplayManager::setScreenQR( String address ){
 	MENU = MENU_DEFAULT;
 
-	drawQrCode();
+	drawQrCode(address);
 
 }
 
@@ -285,14 +313,91 @@ void DisplayManager::setScreenNetworkPassword(){
 
 
 	tft.drawString("Enter password", CENTER, 20);
-	drawPasswordStars();
+	drawTextEditor( MENU == MENU_PASSWD );
 	drawKeyboard();
 
 }
 
 
+void DisplayManager::setScreenSettingsTicks( int8_t ticks ){
+
+	// Timeout
+	tft.setTextSize(2);
+	tft.fillRect(260, 0, 60, 80, 0x0);
+	if( ticks > 0 )
+		tft.drawString(String(ticks).c_str(), 280, 20);
+
+}
+void DisplayManager::setScreenSettings( uint64_t total_tips, String address, uint64_t address_last_changed ){
+	MENU = MENU_SETTINGS;
+
+	settingsContinueButtonEnabled = false;
+
+	tft.fillScreen(TFT_BLACK);
+	
+	tft.setTextFont(2);
+	tft.setTextSize(2);
+	tft.setTextColor(TFT_YELLOW);
+	tft.drawString("Settings", CENTER, 20);
+
+	tft.setTextSize(1);
+
+	tft.setTextDatum(ML_DATUM);
+	String out;
+
+	out = "Addr: "+address;
+	tft.drawString(out.c_str(), 10, 50);
+
+	out = "Last change: ";
+	time_t now;
+	time(&now);
+	uint32_t delta = now-address_last_changed;
+	if( delta < 3600 )
+		out += String(delta/60)+" minutes ago";
+	else if( delta < 3600*24 )
+		out += String(delta/3600)+" hours ago";
+	else
+		out += String(delta/(3600*24))+" days ago";
+
+	tft.drawString(out.c_str(), 10, 65);
+
+	out = "All time tips: "+String(LogManager::uint64_to_string(total_tips));
+	tft.drawString(out.c_str(), 10, 80);
+
+	tft.setTextDatum(MC_DATUM);
+
+	out = "";
+
+	// Buttons
+	tft.fillRect(CENTER-60, 120, 120, WIFI_BUTTON_HEIGHT, BUTTON_COLOR);
+	tft.drawString("Change Address", CENTER, 120+20);
+
+}
+void DisplayManager::setScreenSettingsEnableContinue(){
+
+	settingsContinueButtonEnabled = true;
+	tft.setTextSize(1);
+	tft.fillRect(CENTER-60, 120+WIFI_BUTTON_HEIGHT+5, 120, WIFI_BUTTON_HEIGHT, BUTTON_COLOR);
+	tft.drawString("Continue", CENTER, 120+20+WIFI_BUTTON_HEIGHT+5);
+
+}
 
 
+void DisplayManager::setScreenAddress(){
+	MENU = MENU_ADDRESS;
+
+	tft.fillScreen(TFT_BLACK);
+
+	tft.setTextFont(2);
+	tft.setTextSize(2);
+	tft.setTextColor(TFT_YELLOW);
+
+
+	tft.drawString("Enter wallet address", CENTER, 20);
+	drawTextEditor( false );
+	drawKeyboard();
+
+}
 
 
 
@@ -391,7 +496,7 @@ uint32_t DisplayManager::read32(fs::File &f) {
   return result;
 }
 
-void DisplayManager::drawQrCode( const uint16_t xPos, const uint16_t yPos, const uint16_t color, const uint8_t w ){
+void DisplayManager::drawQrCode( String address, const uint16_t xPos, const uint16_t yPos, const uint16_t color, const uint8_t w ){
 
 	drawBmp("/qr.bmp");
 
@@ -400,7 +505,7 @@ void DisplayManager::drawQrCode( const uint16_t xPos, const uint16_t yPos, const
 
 	QRCode qrcode;
 	uint8_t qrcodeBytes[qrcode_getBufferSize(buffer)];
-	qrcode_initText(&qrcode, qrcodeBytes, buffer, ECC_MEDIUM, (String("doge:")+RECEIVING_ADDRESS).c_str());
+	qrcode_initText(&qrcode, qrcodeBytes, buffer, ECC_MEDIUM, (String("doge:")+address).c_str());
 
 	for( uint8_t y = 0; y < qrcode.size; ++y ){
 
@@ -420,14 +525,18 @@ void DisplayManager::drawQrCode( const uint16_t xPos, const uint16_t yPos, const
 }
 
 
-void DisplayManager::drawPasswordStars(){
+void DisplayManager::drawTextEditor( bool stars ){
 	
 	tft.fillRect(WIFI_BUTTON_LEFT, WIFI_BUTTON_TOP, WIFI_BUTTON_WIDTH, WIFI_BUTTON_HEIGHT-WIFI_BUTTON_PADDING_BOTTOM, BUTTON_COLOR);
 	tft.setTextSize(1);
 	tft.setTextColor(TFT_YELLOW);
 	String output;
-	for( uint8_t i = 0; i < cache_passwd.length(); ++i )
-		output += "*";
+	if( stars ){
+		for( uint8_t i = 0; i < cache_text.length(); ++i )
+			output += "*";
+	}
+	else
+		output = cache_text;
 	tft.drawString(output.c_str(), CENTER, WIFI_BUTTON_TOP+20);
 
 }

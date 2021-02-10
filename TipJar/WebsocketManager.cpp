@@ -5,6 +5,7 @@ void (*WebsocketManager::onCoinsReceived)( uint32_t amount );
 void (*WebsocketManager::onConnect)();
 bool WebsocketManager::connected = false;
 void (*WebsocketManager::onDisconnect)(); 
+String WebsocketManager::cache_address;
 
 void WebsocketManager::setup( void (*coinsReceivedCallback)( uint32_t amount ), void (*onDisconnectCallback)() ){
 
@@ -17,10 +18,11 @@ void WebsocketManager::setup( void (*coinsReceivedCallback)( uint32_t amount ), 
 
 }
 
-bool WebsocketManager::reconnect( void (*onConnectCallback)() ){
+bool WebsocketManager::reconnect( String address, void (*onConnectCallback)() ){
 
 	connected = false;
 	onConnect = onConnectCallback;
+	cache_address = address;
 
 	Serial.println("Connection to dogechain");
 	bool connected = client.connect("wss://ws.dogechain.info/inv");
@@ -30,7 +32,7 @@ bool WebsocketManager::reconnect( void (*onConnectCallback)() ){
 		return false;
 	}
 
-	client.send("{\"op\":\"addr_sub\",\"addr\":\""+RECEIVING_ADDRESS+"\"}");
+	client.send("{\"op\":\"addr_sub\",\"addr\":\""+cache_address+"\"}");
 	return true;
 
 }
@@ -68,7 +70,7 @@ void WebsocketManager::onMessage( WebsocketsMessage message ){
 		for( JsonObject v : outputs ){
 
 			String add = v["addr"];
-			if( add == RECEIVING_ADDRESS )
+			if( add == cache_address )
 				received += v["value"].as<uint64_t>();
 
 		}

@@ -16,5 +16,14 @@ void SoundManager::play( const uint8_t sound ){
 
 }
 
+void SoundManager::setVolume( uint8_t volume ){
+
+	if( volume > 30 )
+		volume = 30;
+		
+	player.volume(volume);
+
+}
+
 
 

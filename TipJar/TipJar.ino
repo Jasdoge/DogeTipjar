@@ -3,15 +3,13 @@
 	Don't forget to edit your TFT_eSPI config in libraries
 
 	Todo: 
-		- Stats display
-			- Total tips all time
-			- Last tip received
 		- Button sounds
 		- Test audio
 		- Settings page on boot
+			- Total tips all time
 			- Ability to change address
+			- Show current address
 			- Show when address was last changed
-			- Show current address and last change on boot
 			- Ability to change volume
 		- Publish schematics
 		- Make tutorial
@@ -46,6 +44,10 @@ uint32_t last_rec = 0;			// Timestamp when we last received a tip
 uint32_t last_screensav = 0; 	// 
 bool screensav_active = false;
 
+// Info screen ticks
+int8_t boot_ticks = 0;
+uint32_t boot_time = 0;	// Time when we first showed the settings screen
+
 bool connected(){
 	return WebsocketManager::connected && ConnectionManager::connected;
 }
@@ -74,9 +76,10 @@ void onDisconnect(){
 
 }
 
+// When everything has been initialized, run this
 void onWebsocketsSetup(){
 	
-	DisplayManager::setScreenQR();
+	DisplayManager::setScreenQR(LogManager::RECEIVING_ADDRESS);
 
 }
 
@@ -86,11 +89,32 @@ void onWebsocketsDisconnect(){
 	if( !ConnectionManager::connected )
 		return;
 	DisplayManager::setScreenConnectingWebsocket();
-	WebsocketManager::reconnect( onWebsocketsSetup );
+	WebsocketManager::reconnect( LogManager::RECEIVING_ADDRESS, onWebsocketsSetup );
 
 }
 
+void drawBootScreen( bool force = false ){
 
+	// Set intro screen
+	if( !boot_time || force ){
+
+		boot_time = millis();
+		boot_ticks = LogManager::RECEIVING_ADDRESS.length() ? 5 : -1;
+
+		DisplayManager::setScreenSettings( 
+			LogManager::total_tips, 
+			LogManager::RECEIVING_ADDRESS, 
+			LogManager::address_changed 
+		);
+		DisplayManager::setScreenSettingsTicks(boot_ticks);
+		if( boot_ticks > -1 )
+			DisplayManager::setScreenSettingsEnableContinue();
+
+	}else{
+		onWebsocketsDisconnect();	// reconnects to websockets
+	}
+
+}
 
 // Attempt a wifi connection
 bool wifiConnect( String ssid = "", String pass = "" ){
@@ -104,8 +128,7 @@ bool wifiConnect( String ssid = "", String pass = "" ){
 
 	}
 
-	onWebsocketsDisconnect();	// reconnects to websockets
-	
+	drawBootScreen();
 	
 	return true;
 
@@ -121,15 +144,38 @@ void onWifiCredentials( String ssid = "", String pass = "" ){
 
 }
 
-void onTouch( uint16_t x, uint16_t y ){
+void onDisplayEvent( uint8_t evt, uint32_t i = 0, String s = "" ){
 
-	Serial.printf("onTouch %i, %i, %i\n", DisplayManager::MENU, x, y);
-	// Retry connection, because it's more likely that we just lost the usual wifi
-	if( DisplayManager::MENU == DisplayManager::MENU_RESCAN )
-		onWifiCredentials();
-	else if( DisplayManager::MENU == DisplayManager::MENU_DEFAULT )
-		last_screensav = 0;
-	
+	if( evt == DisplayManager::EVT_TOUCH ){
+
+		uint16_t x = i>>16;
+		uint16_t y = i&0xFFFF;
+		Serial.printf("onTouch %i, %i, %i\n", DisplayManager::MENU, x, y);
+		// Retry connection, because it's more likely that we just lost the usual wifi
+		if( DisplayManager::MENU == DisplayManager::MENU_RESCAN )
+			onWifiCredentials();
+		// Go to next screen (only works after the first cycle)
+		else if( DisplayManager::MENU == DisplayManager::MENU_DEFAULT )
+			last_screensav = 0;
+		// Halt the start screen countdown
+		else if( boot_ticks > -1 && DisplayManager::MENU == DisplayManager::MENU_SETTINGS ){
+
+			boot_ticks = -1;
+			DisplayManager::setScreenSettingsTicks(boot_ticks);
+			if( LogManager::RECEIVING_ADDRESS.length() )
+				DisplayManager::setScreenSettingsEnableContinue();
+
+		}
+
+	}
+	else if( evt == DisplayManager::EVT_ADDR ){
+
+		LogManager::setAddress( s, ConnectionManager::getTime() );
+		drawBootScreen( true );
+
+	}
+	else if( evt == DisplayManager::EVT_CONTINUE )
+		drawBootScreen();
 
 }
 
@@ -141,7 +187,7 @@ void setup(){
 	Serial.println("IT BEGINS");
 
 	Serial.println("Setup display");
-	DisplayManager::setup( onTouch );
+	DisplayManager::setup( onDisplayEvent );
 	SoundManager::setup();
 
 	ConnectionManager::setup(onDisconnect);
@@ -155,6 +201,8 @@ void setup(){
 
 	LogManager::setup();
 
+	SoundManager::setVolume(LogManager::volume);
+
 	// Setup callbacks and such
 	WebsocketManager::setup( onTipReceived, onWebsocketsDisconnect );
 	
@@ -165,10 +213,12 @@ void setup(){
 
 void loop(){
 
+
 	ConnectionManager::loop();
 	WebsocketManager::loop();
 	DisplayManager::loop();
 
+	const uint32_t ms = millis();
 
 	// Send test on serial to test doge tips received
 	if( Serial.available() ){
@@ -179,18 +229,33 @@ void loop(){
 		}
 
 	}
+
+	// In boot menu
+	if( boot_ticks > -1 ){
+
+		if( ms-boot_time > 1000 ){
+			boot_time = ms;
+			--boot_ticks;
+			if( boot_ticks == -1 ){
+				drawBootScreen();	// Since boot_time is nonzero, this initiates
+			}
+			else
+				DisplayManager::setScreenSettingsTicks(boot_ticks);
+		}
+
+		return;
+	}
 	
 	if( !connected() )
 		return;
 
 	// Handle tip display
-	const uint32_t ms = millis();
 	if( last_rec && ms - last_rec > TIP_TIME ){
 		
 		last_rec = 0;
 		last_screensav = ms;
 		screensav_active = false;
-		DisplayManager::setScreenQR();
+		DisplayManager::setScreenQR(LogManager::RECEIVING_ADDRESS);
 
 	}
 	else if( last_rec )
@@ -201,7 +266,7 @@ void loop(){
 
 		last_screensav = ms;
 		screensav_active = true;
-		DisplayManager::setScreenStats();
+		DisplayManager::setScreenSaver();
 		return;
 
 	}
@@ -210,7 +275,7 @@ void loop(){
 
 		last_screensav = ms;
 		screensav_active = false;
-		DisplayManager::setScreenQR();
+		DisplayManager::setScreenQR(LogManager::RECEIVING_ADDRESS);
 
 	}
 

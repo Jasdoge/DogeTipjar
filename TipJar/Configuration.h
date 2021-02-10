@@ -1,6 +1,5 @@
 #ifndef __Configuration
 #define __Configuration
-const String RECEIVING_ADDRESS = "D9WMuyMgLY2CMAEndsrDEKh4URwWPBdnSk"; 
 
 // Uncomment these if you want to hardcode the wifi credentials. Useful if your password or SSID contains special characters.
 // #define WIFI_SSID ""

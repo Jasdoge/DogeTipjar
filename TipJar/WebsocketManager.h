@@ -18,14 +18,16 @@ class WebsocketManager{
 		static void onEvents(WebsocketsEvent event, String data);
 
 		static void setup( void (*coinsReceivedCallback)( uint32_t amount ), void (*onDisconnectCallback)() );
-		static bool reconnect( void (*onConnectCallback)());
+		static bool reconnect( String address, void (*onConnectCallback)());
 		static void loop();
 
 	private:
+		static String cache_address;
+
 		static void (*onCoinsReceived)( uint32_t amount );
 		static void (*onConnect)();
 		static void (*onDisconnect)(); 
-	
+		
 
 };
 

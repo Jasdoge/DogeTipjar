@@ -14,7 +14,7 @@ class SoundManager{
 	
 		static void setup();
 		static void play( const uint8_t sound );
-
+		static void setVolume( uint8_t volume );
 
 };
 
