@@ -1,0 +1,8 @@
+Note: The order you paste these into your SD card matters!
+
+1. Format your SD card to FAT32
+2. Copy and paste the files onto the card one by one in the following order:
+	1. dogetip_big.mp3
+	2. dogetip_med.mp3
+	3. dogetip_small.mp3
+	4. click.mp3

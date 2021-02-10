@@ -52,8 +52,9 @@ void LogManager::setup(){
 	if( total ){
 		
 		String content = total.readString();
+		Serial.printf("Content: %s\n", content.c_str());
 		address_changed = atoll(content.c_str());
-		Serial.printf("Addr changed: %s\n", uint64_to_string(last_tip));
+		Serial.printf("Addr changed: %s\n", uint64_to_string(address_changed));
 		total.close();
 
 	}
@@ -115,9 +116,20 @@ void LogManager::setAddress( String address, uint64_t time ){
 
 }
 
+void LogManager::resetTips(){
 
+	total_tips = 0;
+	last_tip = 0;
+
+	SPIFFS.remove("/total.txt");
+	SPIFFS.remove("/last.txt");
+
+}
 
 char *LogManager::uint64_to_string(uint64_t input){
+
+	if( !input )
+		return "0";
 
     static char result[21] = "";
     // Clear result from any leftover digits from previous function call.

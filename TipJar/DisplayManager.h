@@ -20,6 +20,7 @@ class DisplayManager{
 		static const uint8_t MENU_RESCAN = 4;	// Tap to re-scan network
 		static const uint8_t MENU_SETTINGS = 5;	// Setting screen
 		static const uint8_t MENU_ADDRESS = 6;	// Set address
+		static const uint8_t MENU_ADDR_CHANGE = 7;	// Address recently changed screen
 		static uint8_t MENU;
 
 
@@ -28,6 +29,8 @@ class DisplayManager{
 		static const uint8_t EVT_CONTINUE = 2;	// raised on boot screen, skips the wait time
 		static const uint8_t EVT_VOLUME = 3;	// i = 1 for up, 0 for down
 		static const uint8_t EVT_BUTTON_CLICK = 4;	// Raised whenever a button is clicked
+		static const uint8_t EVT_KEYBOARD_CANCEL = 5;	// Clicking the cancel button on the keypad
+		static const uint8_t EVT_RESET_TIPS = 6;		// Reset tips
 
 		// Library classes
 		static TFT_eSPI tft;
@@ -60,6 +63,8 @@ class DisplayManager{
 		static void setScreenSettingsVolume( uint8_t volume );
 
 		static void setScreenAddress();
+
+		static void setScreenAddressChanged( uint32_t ms_ago );
 
 
 
@@ -106,10 +111,11 @@ class DisplayManager{
 		static const uint16_t SETTING_LINES_HEIGHT = 20;
 
 		static const uint16_t VOLUME_BUTTON_X = 110;
-		static const uint16_t VOLUME_BUTTON_Y = SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*3;
+		static const uint16_t VOLUME_BUTTON_Y = SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*2;
 		static const uint16_t VOLUME_BUTTON_WIDTH = 18;
 
-		
+		static const uint16_t RESET_BUTTON_WIDTH = 50;
+
 
 		static uint16_t keypad_btns[KEYBOARD_LENGTH*2];	// X/Y 
 		static bool keyboardUpperCase;

@@ -5,8 +5,6 @@
 	Todo: 
 		- Button sounds
 		- Test audio
-		- Settings page on boot
-			- Ability to change volume
 		- Publish schematics
 		- Make tutorial
 		
@@ -24,6 +22,7 @@
 	https://freesound.org/people/Robinhood76/sounds/63814/
 	https://freesound.org/people/clairinski/sounds/184372/
 	https://freesound.org/people/Anthousai/sounds/336578/
+	https://freesound.org/people/EminYILDIRIM/sounds/536108/
 */
 #include "Configuration.h"
 #include "DisplayManager.h"
@@ -32,7 +31,7 @@
 #include "ConnectionManager.h"
 #include "LogManager.h"
 
-void onWifiCredentials( String ssid, String pass );
+void onWifiCredentials( String ssid = "", String pass = "" );
 
 
 
@@ -43,6 +42,8 @@ bool screensav_active = false;
 // Info screen ticks
 int8_t boot_ticks = 0;
 uint32_t boot_time = 0;	// Time when we first showed the settings screen
+bool initialized = false;
+bool addrWarning = false;	// Warned about address changed
 
 bool connected(){
 	return WebsocketManager::connected && ConnectionManager::connected;
@@ -77,6 +78,11 @@ void onWebsocketsSetup(){
 	
 	DisplayManager::setScreenQR(LogManager::RECEIVING_ADDRESS);
 
+	if( !initialized ){
+		initialized = true;
+		SoundManager::play(SoundManager::SOUND_MONEY_MED);
+	}
+
 }
 
 
@@ -95,7 +101,7 @@ void drawBootScreen( bool force = false ){
 	if( !boot_time || force ){
 
 		boot_time = millis();
-		boot_ticks = LogManager::RECEIVING_ADDRESS.length() ? 5 : -1;
+		boot_ticks = LogManager::RECEIVING_ADDRESS.length() && !force ? 5 : -1;
 
 		DisplayManager::setScreenSettings( 
 			LogManager::total_tips, 
@@ -103,12 +109,12 @@ void drawBootScreen( bool force = false ){
 			LogManager::address_changed 
 		);
 		DisplayManager::setScreenSettingsTicks(boot_ticks);
-		if( boot_ticks > -1 )
+		if( LogManager::RECEIVING_ADDRESS.length() )
 			DisplayManager::setScreenSettingsEnableContinue();
 		DisplayManager::setScreenSettingsVolume(LogManager::volume);
 
 	}else{
-		onWebsocketsDisconnect();	// reconnects to websockets
+		onWifiCredentials();	// Setup wifi
 	}
 
 }
@@ -125,14 +131,24 @@ bool wifiConnect( String ssid = "", String pass = "" ){
 
 	}
 
-	drawBootScreen();
+	// Connected
+
+	// We changed the address this session, so we need to note a unix time
+	if( !LogManager::address_changed )
+		LogManager::setAddress( LogManager::RECEIVING_ADDRESS, ConnectionManager::getTime() );
+	
+	if( !addrWarning ){
+		DisplayManager::setScreenAddressChanged( ConnectionManager::getTime()-LogManager::address_changed );
+		delay(4000);
+	}
+	onWebsocketsDisconnect();	// Connect to WS
 	
 	return true;
 
 }
 
 // Callback for when wifi credentials have been entered into the device
-void onWifiCredentials( String ssid = "", String pass = "" ){
+void onWifiCredentials( String ssid, String pass ){
 
 	// All connected, business as usual
 	if( !wifiConnect(ssid, pass) )
@@ -159,20 +175,28 @@ void onDisplayEvent( uint8_t evt, uint32_t i = 0, String s = "" ){
 
 			boot_ticks = -1;
 			DisplayManager::setScreenSettingsTicks(boot_ticks);
-			if( LogManager::RECEIVING_ADDRESS.length() )
-				DisplayManager::setScreenSettingsEnableContinue();
 
 		}
 
 	}
 	else if( evt == DisplayManager::EVT_ADDR ){
 
-		LogManager::setAddress( s, ConnectionManager::getTime() );
+		// This is done before the time is synced, so write 0
+		LogManager::setAddress( s, 0 );
 		drawBootScreen( true );
 
 	}
 	else if( evt == DisplayManager::EVT_CONTINUE )
 		drawBootScreen();
+	else if( evt == DisplayManager::EVT_KEYBOARD_CANCEL ){
+
+		// Go back to scan
+		if( DisplayManager::MENU == DisplayManager::MENU_PASSWD )
+			DisplayManager::setScreenNetworkScan( onWifiCredentials );
+		else
+			drawBootScreen(true);
+
+	}
 
 	else if( evt == DisplayManager::EVT_VOLUME ){
 		
@@ -185,6 +209,18 @@ void onDisplayEvent( uint8_t evt, uint32_t i = 0, String s = "" ){
 		LogManager::setVolume(vol);
 		SoundManager::setVolume(LogManager::volume);	// Doing it this way lets logmanager set limits
 		DisplayManager::setScreenSettingsVolume(LogManager::volume);
+
+	}
+	else if( evt == DisplayManager::EVT_BUTTON_CLICK ){
+
+		SoundManager::play(SoundManager::SOUND_CLICK);
+
+	}
+
+	else if( evt == DisplayManager::EVT_RESET_TIPS ){
+
+		LogManager::resetTips();
+		drawBootScreen(true);
 
 	}
 		
@@ -218,7 +254,7 @@ void setup(){
 	// Setup callbacks and such
 	WebsocketManager::setup( onTipReceived, onWebsocketsDisconnect );
 	
-	onWifiCredentials();
+	drawBootScreen();
 
 }
 

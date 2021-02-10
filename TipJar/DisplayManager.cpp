@@ -112,6 +112,18 @@ void DisplayManager::loop(){
 				return;
 			}
 
+			if(checkClick(
+				t_x, t_y,
+				320-KEYBOARD_DONE_BTN_POS_X,
+				320-KEYBOARD_DONE_BTN_POS_X+KEYBOARD_DONE_BTN_WIDTH,
+				KEYBOARD_DONE_BTN_POS_Y,
+				KEYBOARD_DONE_BTN_POS_Y+KEYBOARD_DONE_BTN_HEIGHT
+			)){
+				cache_SSID = cache_text = "";
+				onEvent(EVT_KEYBOARD_CANCEL, 0, "");
+				return;
+			}
+
 			for( uint8_t i = 0; i < KEYBOARD_LENGTH; ++i ){
 
 				const uint16_t x = keypad_btns[i*2];
@@ -156,8 +168,8 @@ void DisplayManager::loop(){
 				t_x, t_y,
 				CENTER-60,
 				CENTER+60,
-				SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5,
-				SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5+WIFI_BUTTON_HEIGHT
+				SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*4,
+				SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*4+WIFI_BUTTON_HEIGHT
 			)){
 				setScreenAddress();
 			}
@@ -169,8 +181,8 @@ void DisplayManager::loop(){
 					t_x, t_y,
 					CENTER-60,
 					CENTER+60,
-					SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5+WIFI_BUTTON_HEIGHT+5,
-					SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5+WIFI_BUTTON_HEIGHT+5+WIFI_BUTTON_HEIGHT
+					SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*4+WIFI_BUTTON_HEIGHT+5,
+					SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*4+WIFI_BUTTON_HEIGHT+5+WIFI_BUTTON_HEIGHT
 				)
 			){
 				onEvent(EVT_CONTINUE, 0, "");
@@ -196,6 +208,17 @@ void DisplayManager::loop(){
 				VOLUME_BUTTON_Y-8+VOLUME_BUTTON_WIDTH
 			)){
 				onEvent(EVT_VOLUME, 1, "");
+			}
+
+			// Reset tips
+			if(checkClick(
+				t_x, t_y,
+				SETTING_LINES_START_X,
+				SETTING_LINES_START_X+RESET_BUTTON_WIDTH,
+				SETTING_LINES_START_Y+SETTING_LINES_HEIGHT-8,
+				SETTING_LINES_START_Y+SETTING_LINES_HEIGHT-8+VOLUME_BUTTON_WIDTH
+			)){
+				onEvent(EVT_RESET_TIPS, 0, "");
 			}
 
 		}
@@ -369,7 +392,7 @@ void DisplayManager::setScreenSettingsTicks( int8_t ticks ){
 
 	// Timeout
 	tft.setTextSize(2);
-	tft.fillRect(260, 0, 60, 80, 0x0);
+	tft.fillRect(260, 0, 60, 40, 0x0);
 	if( ticks > 0 )
 		tft.drawString(String(ticks).c_str(), 280, 20);
 
@@ -391,36 +414,30 @@ void DisplayManager::setScreenSettings( uint64_t total_tips, String address, uin
 	tft.setTextDatum(ML_DATUM);
 	String out;
 
-
 	out = "Addr: "+address;
 	tft.drawString(out.c_str(), SETTING_LINES_START_X, SETTING_LINES_START_Y);
 
-	out = "Last change: ";
-	time_t now;
-	time(&now);
-
-	uint32_t delta = now-address_last_changed;
-	if( delta < 3600 )
-		out += String(delta/60)+" minutes ago";
-	else if( delta < 3600*24 )
-		out += String(delta/3600)+" hours ago";
-	else
-		out += String(delta/(3600*24))+" days ago";
-
-	if( delta < 3600*24 )
-		tft.setTextColor(TFT_RED);
-	tft.drawString(out.c_str(), SETTING_LINES_START_X, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT);
-	tft.setTextColor(TFT_YELLOW);
-
 	out = "All time tips: "+String(LogManager::uint64_to_string(total_tips))+" DOGE";
-	tft.drawString(out.c_str(), SETTING_LINES_START_X, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*2);
+	tft.drawString(out.c_str(), SETTING_LINES_START_X+60, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT);
 
-	out = "";
 	tft.setTextDatum(MC_DATUM);
 
+	// Reset button
+	tft.fillRect(
+		SETTING_LINES_START_X, 
+		SETTING_LINES_START_Y+SETTING_LINES_HEIGHT-8, 
+		RESET_BUTTON_WIDTH, 
+		VOLUME_BUTTON_WIDTH, 
+		BUTTON_COLOR
+	);
+	tft.drawString("RESET", SETTING_LINES_START_X+RESET_BUTTON_WIDTH/2, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT-VOLUME_BUTTON_WIDTH/2+10);
+
+	out = "";
+	
+
 	// Buttons
-	tft.fillRect(CENTER-60, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5, 120, WIFI_BUTTON_HEIGHT, BUTTON_COLOR);
-	tft.drawString("Change Address", CENTER, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5+20);
+	tft.fillRect(CENTER-60, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*4, 120, WIFI_BUTTON_HEIGHT, BUTTON_COLOR);
+	tft.drawString("Change Address", CENTER, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*4+20);
 
 }
 void DisplayManager::setScreenSettingsVolume( uint8_t volume ){
@@ -460,11 +477,40 @@ void DisplayManager::setScreenSettingsEnableContinue(){
 
 	settingsContinueButtonEnabled = true;
 	tft.setTextSize(1);
-	tft.fillRect(CENTER-60, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5+WIFI_BUTTON_HEIGHT+5, 120, WIFI_BUTTON_HEIGHT, BUTTON_COLOR);
-	tft.drawString("Continue", CENTER, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*5+20+WIFI_BUTTON_HEIGHT+5);
+	tft.fillRect(CENTER-60, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*4+WIFI_BUTTON_HEIGHT+5, 120, WIFI_BUTTON_HEIGHT, BUTTON_COLOR);
+	tft.drawString("Continue", CENTER, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*4+20+WIFI_BUTTON_HEIGHT+5);
 
 }
 
+
+// Shows when the address was last changed
+void DisplayManager::setScreenAddressChanged( uint32_t delta ){
+
+	MENU = MENU_ADDR_CHANGE;
+	tft.fillScreen(TFT_BLACK);
+	tft.setTextFont(2);
+	tft.setTextSize(1);
+
+	tft.drawString("Last Address Change", CENTER, 50);
+	
+	String out;
+	tft.setTextSize(2);
+
+	if( delta < 3600 )
+		out += String(delta/60)+" minutes ago";
+	else if( delta < 3600*24 )
+		out += String(delta/3600)+" hours ago";
+	else
+		out += String(delta/(3600*24))+" days ago";
+
+	if( delta < 3600*24 )
+		tft.setTextColor(TFT_RED);
+
+	tft.drawString(out.c_str(), CENTER, 120);
+
+	tft.setTextColor(TFT_YELLOW);
+
+}
 
 void DisplayManager::setScreenAddress(){
 	MENU = MENU_ADDRESS;
@@ -698,6 +744,17 @@ void DisplayManager::drawKeyboard(){
 	);
 	tft.drawString("DONE", KEYBOARD_DONE_BTN_POS_X+KEYBOARD_DONE_BTN_WIDTH/2, KEYBOARD_DONE_BTN_POS_Y+BUTTON_TEXT_PADDING_TOP);
 	
+	// Cancel button
+	tft.fillRect(
+		320-KEYBOARD_DONE_BTN_POS_X, 
+		KEYBOARD_DONE_BTN_POS_Y, 
+		KEYBOARD_DONE_BTN_WIDTH, 
+		KEYBOARD_DONE_BTN_HEIGHT, 
+		BUTTON_COLOR
+	);
+	tft.drawString("CANCEL", 320-KEYBOARD_DONE_BTN_POS_X+KEYBOARD_DONE_BTN_WIDTH/2, KEYBOARD_DONE_BTN_POS_Y+BUTTON_TEXT_PADDING_TOP);
+	
+
 	
 }
 
