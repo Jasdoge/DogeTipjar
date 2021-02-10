@@ -1,4 +1,5 @@
 #include "LogManager.h"
+#include "Configuration.h"
 
 uint64_t LogManager::total_tips = 0;
 uint64_t LogManager::last_tip = 0;
@@ -29,16 +30,24 @@ void LogManager::setup(){
 
 	}
 
-	total = SPIFFS.open("/volume.txt");
-	if( total ){
-		
-		String content = total.readString();
-		volume = content.toInt();
-		Serial.printf("Volume: %i\n", volume);
-		total.close();
+	// This has a default, so don't accept an empty file
+	if( SPIFFS.exists("/volume.txt") ){
+
+		total = SPIFFS.open("/volume.txt");
+		if( total ){
+			
+			String content = total.readString();
+			volume = content.toInt();
+			Serial.printf("Volume: %i\n", volume);
+			total.close();
+
+		}
 
 	}
 
+	#ifdef HARD_WALLET
+	RECEIVING_ADDRESS = HARD_WALLET;
+	#else
 	total = SPIFFS.open("/address.txt");
 	if( total ){
 		
@@ -47,6 +56,8 @@ void LogManager::setup(){
 		total.close();
 
 	}
+	#endif
+
 
 	total = SPIFFS.open("/address_changed.txt");
 	if( total ){

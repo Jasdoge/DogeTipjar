@@ -5,6 +5,9 @@
 // #define WIFI_SSID ""
 // #define WIFI_PASS ""
 
+// Uncomment this if you want to hard-code a wallet address into the tip jar
+//#define HARD_WALLET "D9WMuyMgLY2CMAEndsrDEKh4URwWPBdnSk"
+
 const uint32_t TIP_TIME = 30000;	// Show tip for 30 sec when it arrives
 const uint32_t QR_TIME = 30000;		// Show QR code splash for 30 sec
 const uint32_t SCREENSAVER_TIME = 5000;	// Show screensaver for 5 sec to prevent burn-in

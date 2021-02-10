@@ -163,6 +163,7 @@ void DisplayManager::loop(){
 
 		else if( MENU == MENU_SETTINGS ){
 
+			#ifndef HARD_WALLET
 			// Address button clicked
 			if(checkClick(
 				t_x, t_y,
@@ -173,6 +174,7 @@ void DisplayManager::loop(){
 			)){
 				setScreenAddress();
 			}
+			#endif
 
 			// Continue button
 			if(
@@ -393,7 +395,7 @@ void DisplayManager::setScreenSettingsTicks( int8_t ticks ){
 	// Timeout
 	tft.setTextSize(2);
 	tft.fillRect(260, 0, 60, 40, 0x0);
-	if( ticks > 0 )
+	if( ticks > -1 )
 		tft.drawString(String(ticks).c_str(), 280, 20);
 
 }
@@ -436,9 +438,10 @@ void DisplayManager::setScreenSettings( uint64_t total_tips, String address, uin
 	
 
 	// Buttons
+	#ifndef HARD_WALLET
 	tft.fillRect(CENTER-60, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*4, 120, WIFI_BUTTON_HEIGHT, BUTTON_COLOR);
 	tft.drawString("Change Address", CENTER, SETTING_LINES_START_Y+SETTING_LINES_HEIGHT*4+20);
-
+	#endif
 }
 void DisplayManager::setScreenSettingsVolume( uint8_t volume ){
 

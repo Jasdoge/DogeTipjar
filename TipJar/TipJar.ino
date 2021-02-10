@@ -137,10 +137,12 @@ bool wifiConnect( String ssid = "", String pass = "" ){
 	if( !LogManager::address_changed )
 		LogManager::setAddress( LogManager::RECEIVING_ADDRESS, ConnectionManager::getTime() );
 	
+	#ifndef HARD_WALLET
 	if( !addrWarning ){
 		DisplayManager::setScreenAddressChanged( ConnectionManager::getTime()-LogManager::address_changed );
 		delay(4000);
 	}
+	#endif
 	onWebsocketsDisconnect();	// Connect to WS
 	
 	return true;
