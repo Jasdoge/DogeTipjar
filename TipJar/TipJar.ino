@@ -1,14 +1,7 @@
 /*
 	Edit Configuration.h
 	Don't forget to edit your TFT_eSPI config in libraries
-
-	Todo: 
-		- Draw schematics
-		- Public schematics
-		- Add factory reset button
-		- Make tutorial
-		
-
+	You can find a template in Templates
 
 	Libraries:
 	https://github.com/Bodmer/TFT_eSPI
