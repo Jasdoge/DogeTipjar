@@ -12,6 +12,8 @@ A fancy dog-based internet currency tipjar
 * Wires
 
 # Schematics
+![Schematics](https://raw.githubusercontent.com/Jasdoge/DogeTipjar/master/Templates/doge_circuit.png)
+
 
 
 # How to program
