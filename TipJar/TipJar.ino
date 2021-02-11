@@ -3,9 +3,9 @@
 	Don't forget to edit your TFT_eSPI config in libraries
 
 	Todo: 
-		- Button sounds
-		- Test audio
-		- Publish schematics
+		- Draw schematics
+		- Public schematics
+		- Add factory reset button
 		- Make tutorial
 		
 
