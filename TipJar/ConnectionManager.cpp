@@ -77,6 +77,24 @@ time_t ConnectionManager::getTime(){
 
 }
 
+void ConnectionManager::factoryReset(){
+
+	WiFi.disconnect(true, true);
+	/*
+	delay(500);
+
+	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT(); //load the flash-saved configs
+	esp_wifi_init(&cfg); //initiate and allocate wifi resources (does not matter if connection fails)
+	delay(2000); //wait a bit
+	if(esp_wifi_restore()!=ESP_OK){
+		Serial.println("WiFi is not initialized by esp_wifi_init ");
+	}else{
+		Serial.println("WiFi Configurations Cleared!");
+	}
+	*/
+
+}
+
 
 
 ConnectionManager Connection;

@@ -137,6 +137,17 @@ void LogManager::resetTips(){
 
 }
 
+
+void LogManager::factoryReset(){
+
+	resetTips();
+	SPIFFS.remove("/address.txt");
+	SPIFFS.remove("/address_changed.txt");
+	SPIFFS.remove("/volume.txt");
+
+}
+
+
 char *LogManager::uint64_to_string(uint64_t input){
 
 	if( !input )

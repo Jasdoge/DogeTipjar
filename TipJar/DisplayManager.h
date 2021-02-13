@@ -87,7 +87,7 @@ class DisplayManager{
 		static const uint8_t WIFI_BUTTON_PADDING_BOTTOM = 4;
 		static const uint8_t WIFI_BUTTON_LEFT = 10;
 		static const uint8_t WIFI_BUTTON_TOP = 40;
-		static const uint8_t BUTTON_TEXT_PADDING_TOP = 16;
+		static const uint8_t BUTTON_TEXT_PADDING_TOP = 18;
 		static const uint16_t BUTTON_COLOR = 0x5AE0;
 		static const uint8_t CENTER = 160;
 
@@ -101,7 +101,7 @@ class DisplayManager{
 		static constexpr char *KEYBOARD_MAP_UPPERCASE = "1234567890\nQWERTYUIOP\nASDFGHJKL\nZXCVBNM \n^<\n";
 		static constexpr char *KEYBOARD_MAP_LOWERCASE = "1234567890\nqwertyuiop\nasdfghjkl\nzxcvbnm \n^<\n";
 
-		static const uint16_t KEYBOARD_DONE_BTN_POS_X = 260;
+		static const uint16_t KEYBOARD_DONE_BTN_POS_X = 250;
 		static const uint16_t KEYBOARD_DONE_BTN_POS_Y = 190;
 		static const uint16_t KEYBOARD_DONE_BTN_WIDTH = 60;
 		static const uint16_t KEYBOARD_DONE_BTN_HEIGHT = WIFI_BUTTON_HEIGHT;

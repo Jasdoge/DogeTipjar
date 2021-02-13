@@ -270,6 +270,17 @@ void loop(){
 		if( input == "test" ){
 			onTipReceived(1000);
 		}
+		else if( input == "factoryReset" ){
+			
+			Serial.println("Performing factory reset");
+			LogManager::factoryReset();
+			ConnectionManager::factoryReset();
+			Serial.println("Reset completed");
+			delay(1000);
+			ESP.restart();
+			delay(1000);
+
+		}
 
 	}
 

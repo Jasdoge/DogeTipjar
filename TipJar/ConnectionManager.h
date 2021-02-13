@@ -12,6 +12,7 @@ class ConnectionManager{
 
 		static void setup( void(*onDisconnectCallback)() );
 		static void loop();
+		static void factoryReset();
 
 		static time_t getTime();
 
