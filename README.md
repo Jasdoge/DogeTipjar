@@ -14,6 +14,39 @@ A fancy dog-based internet currency tipjar
 # Schematics
 ![Schematics](https://raw.githubusercontent.com/Jasdoge/DogeTipjar/master/Templates/doge_circuit.png)
 
+## Touchscreen
+
+| Screen Pin(s) | ESP Pin | Note |
+|---|---|---|
+| VCC, LED, RST | 3v3 | Power supply |
+| GND | gnd | ESP ground, all grounds are tied together |
+| CS | IO5 | Chip select for screen |
+| DC | IO2 | |
+| SDI (MOSI), DIN (Touch) | 23 | SPI |
+| SCK, CLK (Touch) | 18 | SPI Clock |
+| MISO, DO | 19 | SPI |
+| IRQ (touch) | Not connected | Can be used for interrupts |
+| CS | 4 | Chip select for touch |
+
+
+## DFPlayer Mini
+
+![DFPlayer](https://raw.githubusercontent.com/DFRobot/DFRobotMediaWikiImage/master/Image/miniplayer_pin_map.png)
+| Speaker Pin | ESP Pin | Note |
+|---|---|---|
+| 1 (VCC) | 3v3 | Power supply |
+| 2 (RX) | 17 | UART |
+| 3 (TX) | 16 | UART |
+| 6 | Connect to speaker | Either pole on the speaker will work |
+| 7 | GND | Connect to any ground, all grounds are tied together |
+| 8 | Connecto to speaker | 6 and 8 should be connected to one pole each of the speaker | 
+
+Protip: On the bottom of the DFPlayer next to the 8-pin chip directly under the SD card is a 0-ohm resistor. If you remove that and short the unsoldered jumper on the right side of the chip, it'll draw much less current in standby.
+
+
+## Capacitor
+
+Connect a 100-1000uF capacitor with the positive end (long leg) on 5V of the ESP32, and short leg on GND. This will help reduce screen flicker and brownouts on the DFPlayer. 
 
 
 # How to program
